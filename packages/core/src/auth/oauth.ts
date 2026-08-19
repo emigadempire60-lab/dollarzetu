@@ -25,9 +25,10 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   storeCodeVerifier(codeVerifier);
 
   return new URLSearchParams({
+    app_id: config.clientId,
+    client_id: config.clientId,
     scope: config.scopes ?? 'trade account_manage',
     response_type: 'code',
-    client_id: config.clientId,
     redirect_uri: config.redirectUri,
     state: csrfToken,
     code_challenge: codeChallenge,
@@ -53,7 +54,7 @@ export async function buildAuthorizationUrl(config: AuthConfig): Promise<string>
   if (config.utmMedium) params.set('utm_medium', config.utmMedium);
   if (config.utmCampaign) params.set('utm_campaign', config.utmCampaign);
 
-  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
+  return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
 }
 
 /**
@@ -76,7 +77,7 @@ export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
   if (config.utmMedium) params.set('utm_medium', config.utmMedium);
   if (config.utmCampaign) params.set('utm_campaign', config.utmCampaign);
 
-  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
+  return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
 }
 
 /**
