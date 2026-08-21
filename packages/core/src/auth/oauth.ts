@@ -13,22 +13,8 @@ import {
 import { getAuthBaseUrl } from '../config/urls';
 
 /**
- * Returns true if the clientId is a numeric Deriv App ID (classic api.deriv.com app).
- * App Builder apps use alphanumeric client IDs and do NOT support the app_id param
- * on oauth.deriv.com — passing app_id with an alphanumeric value causes Deriv's OAuth
- * server to redirect to deriv.com homepage instead of the login page.
- */
-function isNumericAppId(clientId: string): boolean {
-  return /^\d+$/.test(clientId);
-}
-
-/**
  * Build the base PKCE URLSearchParams shared by login and sign-up.
  * Stores a fresh CSRF token and code verifier in sessionStorage.
- *
- * NOTE: app_id is only included for classic numeric Deriv App IDs. App Builder
- * alphanumeric client IDs must omit app_id — Deriv's OAuth server redirects to
- * deriv.com instead of showing the login form when app_id is non-numeric.
  */
 async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   const csrfToken = generateRandomBase64url(32);
@@ -38,7 +24,8 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   storeCSRFToken(csrfToken);
   storeCodeVerifier(codeVerifier);
 
-  const params = new URLSearchParams({
+  return new URLSearchParams({
+    app_id: config.clientId,
     client_id: config.clientId,
     scope: config.scopes ?? 'trade account_manage',
     response_type: 'code',
@@ -47,13 +34,6 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
   });
-
-  // Only include app_id for classic numeric Deriv App IDs
-  if (isNumericAppId(config.clientId)) {
-    params.set('app_id', config.clientId);
-  }
-
-  return params;
 }
 
 /**
