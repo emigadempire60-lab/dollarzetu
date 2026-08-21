@@ -22,10 +22,11 @@ import {
 import type { AuthInfo, DerivAccount, AuthState, AuthConfig } from '@deriv/core';
 
 function getAuthConfig(): AuthConfig {
-  const redirectUri =
-    typeof window !== 'undefined' && window.location.origin
-      ? window.location.origin
-      : (process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ?? '');
+  // Always use the registered redirect URI from env var so the OAuth URL exactly
+  // matches what is saved in Deriv's developer dashboard. Do NOT use
+  // window.location.origin — the registered URL may differ from the current domain.
+  const redirectUri = process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ??
+    (typeof window !== 'undefined' ? window.location.origin : '');
 
   const config: AuthConfig = {
     clientId: process.env.NEXT_PUBLIC_DERIV_APP_ID ?? '',
@@ -167,6 +168,32 @@ export function useAuth(): UseAuthReturn {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
       const token1 = url.searchParams.get('token1');
+      // _at = cross-domain auth handoff token (set after OAuth callback on redirect domain)
+      const handoffToken = url.searchParams.get('_at');
+
+      // Cross-domain auth handoff: primary domain receives token from redirect domain
+      if (handoffToken) {
+        setAuthState('authenticating');
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('_at');
+        window.history.replaceState(window.history.state, '', cleanUrl.pathname + cleanUrl.search);
+        try {
+          const authInfo: AuthInfo = {
+            access_token: handoffToken,
+            refresh_token: '',
+            token_type: 'Bearer',
+            expires_in: 31536000,
+            expires_at: Math.floor(Date.now() / 1000) + 31536000,
+            scope: 'read trade admin account_manage',
+          };
+          await completeAuth(authInfo);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Authentication failed');
+          setAuthState('error');
+          clearAllAuthData();
+        }
+        return;
+      }
 
       // Phase 3-5: Handle OAuth callback (PKCE code exchange)
       if (code) {
@@ -174,6 +201,19 @@ export function useAuth(): UseAuthReturn {
         try {
           const authInfo = await handleOAuthCallback(window.location.href, getAuthConfig());
           await completeAuth(authInfo);
+          // Cross-domain handoff: if OAuth callback landed on a different domain than the
+          // primary domain, transfer the auth token to the primary domain.
+          const primaryDomain = process.env.NEXT_PUBLIC_DERIV_PRIMARY_DOMAIN;
+          if (primaryDomain && typeof window !== 'undefined' &&
+              window.location.origin !== primaryDomain) {
+            const storedAuth = getAuthInfo();
+            if (storedAuth?.access_token) {
+              window.location.replace(
+                `${primaryDomain}?_at=${encodeURIComponent(storedAuth.access_token)}`
+              );
+              return;
+            }
+          }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Authentication failed');
           setAuthState('error');
