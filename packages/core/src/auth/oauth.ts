@@ -38,22 +38,14 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
 
 /**
  * Build the OAuth 2.0 login authorization URL with PKCE parameters.
- * Includes optional partner attribution params (affiliate token, utm_*) when
- * present in config — so attribution carries through if the user clicks Login
- * then signs up from Deriv's home page.
+ * NOTE: Affiliate and UTM params are intentionally NOT included here.
+ * Deriv's OAuth server rejects PKCE login requests that include unknown
+ * params like 't=' (affiliate token) and redirects to deriv.com homepage
+ * instead of showing the login form. These params are only used in sign-up.
  * Stores CSRF token and code verifier in sessionStorage.
  */
 export async function buildAuthorizationUrl(config: AuthConfig): Promise<string> {
   const params = await buildPkceParams(config);
-
-  if (config.affiliateToken) {
-    const tokenParam = config.affiliateTokenParam ?? 't';
-    params.set(tokenParam, config.affiliateToken);
-  }
-  if (config.utmSource) params.set('utm_source', config.utmSource);
-  if (config.utmMedium) params.set('utm_medium', config.utmMedium);
-  if (config.utmCampaign) params.set('utm_campaign', config.utmCampaign);
-
   return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
 }
 
