@@ -35,7 +35,7 @@ export function getApiBaseUrl(): string {
 
 export function getPublicWsUrl(): string {
   const envAppId = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_DERIV_APP_ID : null;
-  const appId = (envAppId && /^\d+$/.test(envAppId)) ? envAppId : '1089';
+  const appId = envAppId && envAppId.trim() ? envAppId.trim() : '1089';
   return `wss://ws.derivws.com/websockets/v3?app_id=${appId}`;
 }
 

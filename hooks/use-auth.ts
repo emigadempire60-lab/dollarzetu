@@ -22,11 +22,14 @@ import {
 import type { AuthInfo, DerivAccount, AuthState, AuthConfig } from '@deriv/core';
 
 function getAuthConfig(): AuthConfig {
+  const redirectUri =
+    typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ?? '');
+
   const config: AuthConfig = {
     clientId: process.env.NEXT_PUBLIC_DERIV_APP_ID ?? '',
-    redirectUri:
-      process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ??
-      (typeof window !== 'undefined' ? window.location.origin : ''),
+    redirectUri,
   };
 
   // Convert comma-separated scopes to space-separated (OAuth spec)
@@ -163,13 +166,45 @@ export function useAuth(): UseAuthReturn {
     const init = async () => {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
+      const token1 = url.searchParams.get('token1');
 
-      // Phase 3-5: Handle OAuth callback
+      // Phase 3-5: Handle OAuth callback (PKCE code exchange)
       if (code) {
         setAuthState('authenticating');
         try {
           const authInfo = await handleOAuthCallback(window.location.href, getAuthConfig());
           await completeAuth(authInfo);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Authentication failed');
+          setAuthState('error');
+          clearAllAuthData();
+        }
+        return;
+      }
+
+      // Handle standard Deriv OAuth callback (token1/acct1 params)
+      if (token1) {
+        setAuthState('authenticating');
+        try {
+          const authInfo: AuthInfo = {
+            access_token: token1,
+            refresh_token: '',
+            token_type: 'Bearer',
+            expires_in: 31536000,
+            expires_at: Math.floor(Date.now() / 1000) + 31536000,
+            scope: 'read trade admin account_manage',
+          };
+          await completeAuth(authInfo);
+          if (typeof window !== 'undefined') {
+            const cleanUrl = new URL(window.location.href);
+            const params = Array.from(cleanUrl.searchParams.keys());
+            params.forEach(p => {
+              if (p.startsWith('acct') || p.startsWith('token') || p.startsWith('cur')) {
+                cleanUrl.searchParams.delete(p);
+              }
+            });
+            window.history.replaceState(window.history.state, '', cleanUrl.pathname + cleanUrl.search);
+          }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Authentication failed');
           setAuthState('error');
