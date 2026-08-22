@@ -25,11 +25,14 @@ function getAuthConfig(): AuthConfig {
   // Always use the registered redirect URI from env var so the OAuth URL exactly
   // matches what is saved in Deriv's developer dashboard. Do NOT use
   // window.location.origin — the registered URL may differ from the current domain.
-  const redirectUri = process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ??
+  // .replace(/[\r\n]+/g, '') prevents accidental newlines (%0A) from Vercel env var copy-paste.
+  const rawRedirectUri = process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ?? '';
+  const redirectUri = rawRedirectUri.trim().replace(/[\r\n]+/g, '') ||
     (typeof window !== 'undefined' ? window.location.origin : '');
 
+  const rawClientId = process.env.NEXT_PUBLIC_DERIV_APP_ID ?? '';
   const config: AuthConfig = {
-    clientId: process.env.NEXT_PUBLIC_DERIV_APP_ID ?? '',
+    clientId: rawClientId.trim().replace(/[\r\n]+/g, ''),
     redirectUri,
   };
 
