@@ -39,16 +39,12 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   });
 }
 
-/**
- * Build the OAuth 2.0 login authorization URL with PKCE parameters.
- * NOTE: Affiliate and UTM params are intentionally NOT included here.
- * Deriv's OAuth server rejects PKCE login requests that include unknown
- * params like 't=' (affiliate token) and redirects to deriv.com homepage
- * instead of showing the login form. These params are only used in sign-up.
- * Stores CSRF token and code verifier in sessionStorage.
- */
 export async function buildAuthorizationUrl(config: AuthConfig): Promise<string> {
-  const params = await buildPkceParams(config);
+  const cleanClientId = config.clientId.trim().replace(/[\r\n]+/g, '');
+  const params = new URLSearchParams({
+    app_id: cleanClientId,
+    l: 'en',
+  });
   return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
 }
 
@@ -57,12 +53,14 @@ export async function buildAuthorizationUrl(config: AuthConfig): Promise<string>
  * Includes prompt=registration (required to show the Deriv registration form)
  * and optional partner attribution params forwarded using the exact parameter
  * name from the referral link (t, affiliate_token, sidi, or ca).
- * Stores CSRF token and code verifier in sessionStorage.
  */
 export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
-  const params = await buildPkceParams(config);
-
-  params.set('prompt', 'registration');
+  const cleanClientId = config.clientId.trim().replace(/[\r\n]+/g, '');
+  const params = new URLSearchParams({
+    app_id: cleanClientId,
+    l: 'en',
+    prompt: 'registration',
+  });
 
   if (config.affiliateToken) {
     const tokenParam = config.affiliateTokenParam ?? 't';
