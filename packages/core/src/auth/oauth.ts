@@ -24,17 +24,12 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   storeCSRFToken(csrfToken);
   storeCodeVerifier(codeVerifier);
 
-  const rawClientId = config.clientId.trim().replace(/[\r\n]+/g, '');
+  const cleanClientId = config.clientId.trim().replace(/[\r\n]+/g, '');
   const cleanRedirectUri = config.redirectUri.trim().replace(/[\r\n]+/g, '');
 
-  // Deriv's OAuth server (oauth.deriv.com) strictly requires a numeric App ID (e.g. '1089' or a numeric ID).
-  // If an alphanumeric App Builder ID (e.g. '33GV4MHkqR2PmrwmwXjU7') is passed, oauth.deriv.com
-  // fails lookup and redirects to deriv.com (which returns 403).
-  const oauthAppId = /^\d+$/.test(rawClientId) ? rawClientId : '1089';
-
   return new URLSearchParams({
-    app_id: oauthAppId,
-    client_id: oauthAppId,
+    app_id: cleanClientId,
+    client_id: cleanClientId,
     scope: config.scopes ?? 'trade account_manage',
     response_type: 'code',
     redirect_uri: cleanRedirectUri,
@@ -151,14 +146,13 @@ export function validateCallback(params: CallbackParams, redirectUri: string): s
  * Exchange authorization code for access and refresh tokens.
  */
 export async function exchangeCodeForTokens(params: TokenExchangeParams): Promise<AuthInfo> {
-  const rawClientId = params.clientId.trim().replace(/[\r\n]+/g, '');
+  const cleanClientId = params.clientId.trim().replace(/[\r\n]+/g, '');
   const cleanRedirectUri = params.redirectUri.trim().replace(/[\r\n]+/g, '');
-  const oauthAppId = /^\d+$/.test(rawClientId) ? rawClientId : '1089';
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code: params.code,
-    client_id: oauthAppId,
+    client_id: cleanClientId,
     redirect_uri: cleanRedirectUri,
     code_verifier: params.codeVerifier,
   });
@@ -197,13 +191,12 @@ export async function refreshAccessToken(
   refreshToken: string,
   clientId: string
 ): Promise<AuthInfo> {
-  const rawClientId = clientId.trim().replace(/[\r\n]+/g, '');
-  const oauthAppId = /^\d+$/.test(rawClientId) ? rawClientId : '1089';
+  const cleanClientId = clientId.trim().replace(/[\r\n]+/g, '');
 
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
-    client_id: oauthAppId,
+    client_id: cleanClientId,
   });
 
   const response = await fetch(`${getAuthBaseUrl()}/token`, {
