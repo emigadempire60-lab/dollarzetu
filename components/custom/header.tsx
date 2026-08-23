@@ -194,6 +194,45 @@ export function Header({
           </Button>
         ) : (
           <div className="flex items-center gap-2">
+            <Popover open={tokenPopoverOpen} onOpenChange={setTokenPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-xs font-mono gap-1 text-muted-foreground hover:text-foreground">
+                  <Key className="w-3.5 h-3.5" />
+                  <span>API Token</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="end">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold leading-none">Connect with API Token</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Paste your Deriv API Token (from Deriv Account Settings &gt; API Token) to connect your account instantly.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      placeholder="Paste token..."
+                      value={tokenInput}
+                      onChange={(e) => setTokenInput(e.target.value)}
+                      className="text-xs font-mono h-8"
+                    />
+                    <Button
+                      size="sm"
+                      className="text-xs h-8"
+                      disabled={!tokenInput.trim() || isAuthenticating}
+                      onClick={async () => {
+                        if (tokenInput.trim()) {
+                          await onLogin(tokenInput.trim());
+                          setTokenPopoverOpen(false);
+                          setTokenInput('');
+                        }
+                      }}
+                    >
+                      Connect
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" size="sm" onClick={() => onLogin()} disabled={isAuthenticating} className="text-xs font-mono">
               {isAuthenticating ? 'Logging in...' : 'Log in'}
             </Button>

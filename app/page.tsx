@@ -12,7 +12,7 @@ import type { TradeSignal } from '@/lib/signals';
 export default function DigitsPage() {
   const logoSrc = useLogoSrc();
   const { ws, isConnected, isExhausted, auth } = useDerivWSContext();
-  const { authState, accounts, activeAccount, login, signUp, logout, switchAccount } = auth;
+  const { authState, accounts, activeAccount, login, loginWithToken, signUp, logout, switchAccount } = auth;
 
   const trading = useDigitsTrading({ ws, isConnected, isExhausted, isAuthenticated: !!auth.wsUrl, onAuthWSFailed: logout });
 
@@ -64,7 +64,7 @@ export default function DigitsPage() {
       authState={authState}
       accounts={accounts}
       activeAccount={activeAccount}
-      onLogin={login}
+      onLogin={async (tok) => (tok ? loginWithToken(tok) : login())}
       onSignUp={signUp}
       onLogout={logout}
       onSwitchAccount={switchAccount}

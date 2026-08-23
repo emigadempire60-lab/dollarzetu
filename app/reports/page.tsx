@@ -25,7 +25,7 @@ export default function ReportsPage() {
   const logoSrc = useLogoSrc();
   const router = useRouter();
   const { ws, isConnected, isExhausted, auth } = useDerivWSContext();
-  const { authState, accounts, activeAccount, login, signUp, logout, switchAccount } = auth;
+  const { authState, accounts, activeAccount, login, loginWithToken, signUp, logout, switchAccount } = auth;
   const trading = useDigitsTrading({ ws, isConnected, isExhausted, isAuthenticated: !!auth.wsUrl, onAuthWSFailed: logout });
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function ReportsPage() {
         authState={authState}
         accounts={accounts}
         activeAccount={activeAccount}
-        onLogin={login}
+        onLogin={async (tok) => (tok ? loginWithToken(tok) : login())}
         onSignUp={signUp}
         onLogout={logout}
         onSwitchAccount={switchAccount}

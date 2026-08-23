@@ -36,7 +36,7 @@ export interface DigitsViewProps {
   authState: AuthState;
   accounts: DerivAccount[];
   activeAccount: DerivAccount | null;
-  onLogin: () => Promise<void>;
+  onLogin: (token?: string) => Promise<void>;
   onSignUp: () => Promise<void>;
   onLogout: () => void;
   onSwitchAccount: (accountId: string) => Promise<void>;
