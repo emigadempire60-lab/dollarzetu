@@ -28,10 +28,9 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   const cleanRedirectUri = config.redirectUri.trim().replace(/[\r\n]+/g, '');
 
   return new URLSearchParams({
-    app_id: cleanClientId,
-    client_id: cleanClientId,
     scope: config.scopes ?? 'trade account_manage',
     response_type: 'code',
+    client_id: cleanClientId,
     redirect_uri: cleanRedirectUri,
     state: csrfToken,
     code_challenge: codeChallenge,
@@ -40,27 +39,7 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
 }
 
 export async function buildAuthorizationUrl(config: AuthConfig): Promise<string> {
-  const cleanClientId = config.clientId.trim().replace(/[\r\n]+/g, '');
-  const params = new URLSearchParams({
-    app_id: cleanClientId,
-    l: 'en',
-  });
-  return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
-}
-
-/**
- * Build the OAuth 2.0 sign-up authorization URL.
- * Includes prompt=registration (required to show the Deriv registration form)
- * and optional partner attribution params forwarded using the exact parameter
- * name from the referral link (t, affiliate_token, sidi, or ca).
- */
-export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
-  const cleanClientId = config.clientId.trim().replace(/[\r\n]+/g, '');
-  const params = new URLSearchParams({
-    app_id: cleanClientId,
-    l: 'en',
-    prompt: 'registration',
-  });
+  const params = await buildPkceParams(config);
 
   if (config.affiliateToken) {
     const tokenParam = config.affiliateTokenParam ?? 't';
@@ -70,7 +49,29 @@ export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
   if (config.utmMedium) params.set('utm_medium', config.utmMedium);
   if (config.utmCampaign) params.set('utm_campaign', config.utmCampaign);
 
-  return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
+  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
+}
+
+/**
+ * Build the OAuth 2.0 sign-up authorization URL.
+ * Includes prompt=registration (required to show the Deriv registration form)
+ * and optional partner attribution params forwarded using the exact parameter
+ * name from the referral link (t, affiliate_token, sidi, or ca).
+ */
+export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
+  const params = await buildPkceParams(config);
+
+  params.set('prompt', 'registration');
+
+  if (config.affiliateToken) {
+    const tokenParam = config.affiliateTokenParam ?? 't';
+    params.set(tokenParam, config.affiliateToken);
+  }
+  if (config.utmSource) params.set('utm_source', config.utmSource);
+  if (config.utmMedium) params.set('utm_medium', config.utmMedium);
+  if (config.utmCampaign) params.set('utm_campaign', config.utmCampaign);
+
+  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
 }
 
 /**
