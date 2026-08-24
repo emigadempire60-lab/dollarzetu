@@ -179,7 +179,7 @@ export function useDigitsTrading({ ws, isConnected, isExhausted, isAuthenticated
   }, [proposal, activeSymbol, contractMode, stake, isBuying, isAuthenticated]);
 
   const buyContract = useCallback(async () => {
-    if (!activeSymbol || !tradingWs || !tradingIsConnected) return;
+    if (!activeSymbol || !effectiveProposal) return;
 
     recordTradePlaced({
       symbol: activeSymbol.underlying_symbol,
@@ -188,38 +188,15 @@ export function useDigitsTrading({ ws, isConnected, isExhausted, isAuthenticated
       barrier: selectedDigit,
     });
 
-    if (proposal && proposal.id !== 'fallback_proposal') {
-      await buyWithProposal(proposal);
-    } else if (proposalParams) {
-      try {
-        const needsBarrier = contractMode !== 'DIGITEVEN' && contractMode !== 'DIGITODD';
-        const proposalPayload: Record<string, unknown> = {
-          proposal: 1,
-          amount: proposalParams.amount,
-          basis: proposalParams.basis,
-          contract_type: proposalParams.contractType,
-          currency: proposalParams.currency,
-          symbol: proposalParams.symbol,
-          duration: proposalParams.duration,
-          duration_unit: proposalParams.durationUnit,
-          ...(needsBarrier ? { barrier: String(selectedDigit) } : {}),
-        };
-        const propResp = await tradingWs.send<{ proposal?: { id: string; ask_price: number; payout: number; longcode: string; validation_params?: { stake?: { min?: string }; payout?: { max?: string } } } }>(proposalPayload);
-        if (propResp.proposal) {
-          await buyWithProposal({
-            id: propResp.proposal.id,
-            askPrice: propResp.proposal.ask_price,
-            payout: propResp.proposal.payout,
-            longcode: propResp.proposal.longcode,
-            minStake: parseFloat(propResp.proposal.validation_params?.stake?.min ?? '0'),
-            maxPayout: parseFloat(propResp.proposal.validation_params?.payout?.max ?? '0'),
-          });
-        }
-      } catch (err) {
-        console.error('One-shot proposal buy failed:', err);
-      }
-    }
-  }, [proposal, proposalParams, activeSymbol, contractMode, stake, selectedDigit, buyWithProposal, tradingWs, tradingIsConnected]);
+    const needsBarrier = contractMode !== 'DIGITEVEN' && contractMode !== 'DIGITODD';
+    await buyWithProposal(effectiveProposal, {
+      symbol: activeSymbol.underlying_symbol,
+      contractType: contractMode,
+      amount: parseFloat(stake) || 10,
+      duration: duration,
+      ...(needsBarrier ? { barrier: selectedDigit } : {}),
+    });
+  }, [effectiveProposal, activeSymbol, contractMode, stake, duration, selectedDigit, buyWithProposal]);
 
   useEffect(() => {
     if (buyResult) {
