@@ -28,11 +28,10 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   const cleanRedirectUri = config.redirectUri.trim().replace(/[\r\n]+/g, '');
 
   return new URLSearchParams({
-    app_id: cleanClientId,
-    client_id: cleanClientId,
-    scope: config.scopes ?? 'trade account_manage',
     response_type: 'code',
+    client_id: cleanClientId,
     redirect_uri: cleanRedirectUri,
+    scope: config.scopes ?? 'trade account_manage',
     state: csrfToken,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
@@ -41,23 +40,19 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
 
 /**
  * Build the OAuth 2.0 login authorization URL with PKCE parameters.
- * NOTE: Affiliate and UTM params are intentionally NOT included here.
- * Deriv's OAuth server rejects PKCE login requests that include unknown
- * params like 't=' (affiliate token) and redirects to deriv.com homepage
- * instead of showing the login form. These params are only used in sign-up.
+ * Endpoint: https://auth.deriv.com/oauth2/auth
  * Stores CSRF token and code verifier in sessionStorage.
  */
 export async function buildAuthorizationUrl(config: AuthConfig): Promise<string> {
   const params = await buildPkceParams(config);
-  return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
+  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
 }
 
 /**
  * Build the OAuth 2.0 sign-up authorization URL.
+ * Endpoint: https://auth.deriv.com/oauth2/auth
  * Includes prompt=registration (required to show the Deriv registration form)
- * and optional partner attribution params forwarded using the exact parameter
- * name from the referral link (t, affiliate_token, sidi, or ca).
- * Stores CSRF token and code verifier in sessionStorage.
+ * and optional partner attribution params.
  */
 export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
   const params = await buildPkceParams(config);
@@ -72,7 +67,7 @@ export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
   if (config.utmMedium) params.set('utm_medium', config.utmMedium);
   if (config.utmCampaign) params.set('utm_campaign', config.utmCampaign);
 
-  return `${getAuthBaseUrl()}/authorize?${params.toString()}`;
+  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
 }
 
 /**
