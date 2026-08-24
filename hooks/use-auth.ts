@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import {
   initiateLogin,
   initiateSignUp,
@@ -382,10 +383,15 @@ export function useAuth(): UseAuthReturn {
         setActiveAccountId(accountId);
         setWsUrl(otpUrl);
       } catch (err) {
+        const targetAccount = accounts.find(a => a.account_id === accountId);
+        const targetType = targetAccount?.account_type === 'real' ? 'Real (CR)' : 'Demo (VRTC)';
+        toast.error(`Cannot Switch to ${targetType} Account`, {
+          description: `Your current API Token is authorized for your ${activeAccount?.account_type ?? 'current'} account. To switch to your ${targetType} account, connect using an API Token generated from your ${targetType} account.`,
+        });
         setError(err instanceof Error ? err.message : 'Account switch failed');
       }
     },
-    [fetchOTPUrl, accounts]
+    [fetchOTPUrl, accounts, activeAccount]
   );
 
   const loginWithToken = useCallback(
