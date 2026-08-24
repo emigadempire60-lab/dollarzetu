@@ -35,6 +35,7 @@ export function useProposal(
 
     const payload: Record<string, unknown> = {
       proposal: 1,
+      subscribe: 1,
       amount: params.amount,
       basis: params.basis,
       contract_type: params.contractType,
