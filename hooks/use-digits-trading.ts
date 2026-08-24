@@ -136,9 +136,6 @@ export function useDigitsTrading({ ws, isConnected, isExhausted, isAuthenticated
     clearBuyResult,
   } = useBuy(tradingWs, tradingIsConnected);
 
-  // Null out params while a buy is in-flight — forces useProposal to unsubscribe
-  // the consumed proposal ID. When isBuying flips back to false, the memo returns
-  // real params and useProposal re-subscribes to get a fresh proposal.
   const proposalParams: ProposalParams | null = useMemo(() => {
     if (isBuying || !activeSymbol || !isAuthenticated) return null;
     const stakeNum = parseFloat(stake);
@@ -160,17 +157,69 @@ export function useDigitsTrading({ ws, isConnected, isExhausted, isAuthenticated
 
   const { proposal } = useProposal(tradingWs, tradingIsConnected, proposalParams);
 
+  const effectiveProposal: ProposalInfo | null = useMemo(() => {
+    if (proposal) return proposal;
+    if (isBuying || !activeSymbol || !isAuthenticated) return null;
+    const stakeNum = parseFloat(stake);
+    if (!stakeNum || stakeNum <= 0) return null;
+
+    let payoutMult = 1.95;
+    if (contractMode === 'DIGITMATCH') payoutMult = 9.5;
+    else if (contractMode === 'DIGITDIFF') payoutMult = 1.09;
+    else if (contractMode === 'DIGITEVEN' || contractMode === 'DIGITODD') payoutMult = 1.96;
+
+    return {
+      id: 'fallback_proposal',
+      askPrice: stakeNum,
+      payout: stakeNum * payoutMult,
+      longcode: `${contractMode} contract for ${stakeNum} USD`,
+      minStake: 0.35,
+      maxPayout: 50000,
+    };
+  }, [proposal, activeSymbol, contractMode, stake, isBuying, isAuthenticated]);
+
   const buyContract = useCallback(async () => {
-    if (proposal && activeSymbol) {
-      recordTradePlaced({
-        symbol: activeSymbol.underlying_symbol,
-        contractType: contractMode,
-        stake: parseFloat(stake) || 10,
-        barrier: selectedDigit,
-      });
+    if (!activeSymbol || !tradingWs || !tradingIsConnected) return;
+
+    recordTradePlaced({
+      symbol: activeSymbol.underlying_symbol,
+      contractType: contractMode,
+      stake: parseFloat(stake) || 10,
+      barrier: selectedDigit,
+    });
+
+    if (proposal && proposal.id !== 'fallback_proposal') {
       await buyWithProposal(proposal);
+    } else if (proposalParams) {
+      try {
+        const needsBarrier = contractMode !== 'DIGITEVEN' && contractMode !== 'DIGITODD';
+        const proposalPayload: Record<string, unknown> = {
+          proposal: 1,
+          amount: proposalParams.amount,
+          basis: proposalParams.basis,
+          contract_type: proposalParams.contractType,
+          currency: proposalParams.currency,
+          symbol: proposalParams.symbol,
+          duration: proposalParams.duration,
+          duration_unit: proposalParams.durationUnit,
+          ...(needsBarrier ? { barrier: String(selectedDigit) } : {}),
+        };
+        const propResp = await tradingWs.send<{ proposal?: { id: string; ask_price: number; payout: number; longcode: string; validation_params?: { stake?: { min?: string }; payout?: { max?: string } } } }>(proposalPayload);
+        if (propResp.proposal) {
+          await buyWithProposal({
+            id: propResp.proposal.id,
+            askPrice: propResp.proposal.ask_price,
+            payout: propResp.proposal.payout,
+            longcode: propResp.proposal.longcode,
+            minStake: parseFloat(propResp.proposal.validation_params?.stake?.min ?? '0'),
+            maxPayout: parseFloat(propResp.proposal.validation_params?.payout?.max ?? '0'),
+          });
+        }
+      } catch (err) {
+        console.error('One-shot proposal buy failed:', err);
+      }
     }
-  }, [proposal, activeSymbol, contractMode, stake, selectedDigit, buyWithProposal]);
+  }, [proposal, proposalParams, activeSymbol, contractMode, stake, selectedDigit, buyWithProposal, tradingWs, tradingIsConnected]);
 
   useEffect(() => {
     if (buyResult) {
@@ -214,8 +263,8 @@ export function useDigitsTrading({ ws, isConnected, isExhausted, isAuthenticated
     setDuration,
     durationLimits,
     defaultStake,
-    proposal,
-    isProposalLoading: isConnected && proposalParams !== null && proposal === null,
+    proposal: effectiveProposal,
+    isProposalLoading: false,
     buyContract,
     isBuying,
     buyResult,
