@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getTelemetryStats, type TelemetryStats, type TelemetryTradeEvent } from '@/lib/analytics';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { getTelemetryStats, clearTelemetryEvents, type TelemetryStats, type TelemetryTradeEvent } from '@/lib/analytics';
 
 interface TradingJournalCardProps {
   className?: string;
@@ -12,6 +14,7 @@ interface TradingJournalCardProps {
 
 export function TradingJournalCard({ className = '' }: TradingJournalCardProps) {
   const [stats, setStats] = useState<TelemetryStats | null>(null);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   useEffect(() => {
     setStats(getTelemetryStats());
@@ -73,14 +76,62 @@ export function TradingJournalCard({ className = '' }: TradingJournalCardProps) 
             📊 Trading Performance Journal
           </CardTitle>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportCSV}
-          className="font-mono text-xs text-primary border-primary/30 hover:bg-primary/10 h-7"
-        >
-          📥 Export CSV Journal
-        </Button>
+        <div className="flex items-center gap-2">
+          <Popover open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-mono text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10 h-7"
+              >
+                🗑️ Clear History
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 bg-card border-border shadow-xl">
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-mono font-bold text-rose-400 flex items-center gap-1.5">
+                    ⚠️ Clear Trade History?
+                  </h4>
+                  <p className="text-[11px] font-mono text-muted-foreground leading-normal">
+                    Are you sure you want to clear your trade history entries? This action cannot be undone.
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setClearConfirmOpen(false)}
+                    className="text-xs font-mono h-7 px-2 text-muted-foreground"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      clearTelemetryEvents();
+                      setStats(getTelemetryStats());
+                      setClearConfirmOpen(false);
+                      toast.success('Trade history cleared');
+                    }}
+                    className="text-xs font-mono h-7 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                  >
+                    Yes, Clear History
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCSV}
+            className="font-mono text-xs text-primary border-primary/30 hover:bg-primary/10 h-7"
+          >
+            📥 Export CSV Journal
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="p-4 space-y-4 font-mono text-xs">
