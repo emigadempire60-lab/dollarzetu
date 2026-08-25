@@ -37,9 +37,10 @@ export function useSellContract(
       setSellError(null);
 
       try {
+        const priceNum = typeof bidPrice === 'number' ? bidPrice : parseFloat(String(bidPrice)) || 0;
         await ws.send<SellResponse>({
-          sell: contractId,
-          price: bidPrice,
+          sell: Number(contractId),
+          price: priceNum,
         });
       } catch (err) {
         setSellError(err instanceof Error ? err.message : 'Sell failed');
