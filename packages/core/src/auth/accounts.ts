@@ -47,11 +47,12 @@ export async function getWebSocketOTP(
   authInfo: AuthInfo,
   clientId: string
 ): Promise<string> {
+  const cleanClientId = clientId.trim().replace(/[\r\n]+/g, '');
   const response = await fetch(`${getApiBaseUrl()}/accounts/${accountId}/otp`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${authInfo.access_token}`,
-      'Deriv-App-ID': clientId,
+      'Deriv-App-ID': cleanClientId,
     },
   });
 
@@ -60,7 +61,11 @@ export async function getWebSocketOTP(
   }
 
   const data: OTPResponse = await response.json();
-  return data.data.url;
+  let wsUrl = data.data.url;
+  if (wsUrl.startsWith('http')) {
+    wsUrl = wsUrl.replace(/^http/, 'ws');
+  }
+  return wsUrl;
 }
 
 /**
