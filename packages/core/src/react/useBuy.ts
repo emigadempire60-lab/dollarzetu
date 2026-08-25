@@ -40,24 +40,25 @@ export function useBuy(
       setBuyResult(null);
 
       try {
+        const priceNum = typeof proposal.askPrice === 'number' ? proposal.askPrice : parseFloat(String(proposal.askPrice)) || 10;
         const payload: Record<string, unknown> =
           proposal.id !== 'fallback_proposal'
             ? {
                 buy: proposal.id,
-                price: String(proposal.askPrice),
+                price: priceNum,
               }
             : {
                 buy: 1,
-                price: String(proposal.askPrice),
+                price: priceNum,
                 parameters: {
-                  amount: proposal.askPrice,
+                  amount: priceNum,
                   basis: 'stake',
                   contract_type: params?.contractType,
                   currency: 'USD',
                   symbol: params?.symbol,
                   duration: params?.duration ?? 5,
                   duration_unit: 't',
-                  ...(params?.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
+                  ...(params?.barrier !== undefined ? { barrier: params.barrier } : {}),
                 },
               };
 
