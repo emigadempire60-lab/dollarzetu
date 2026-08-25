@@ -48,17 +48,17 @@ export function useBuy(
                 price: priceNum,
               }
             : {
-                buy: 1,
+                buy: '1',
                 price: priceNum,
                 parameters: {
                   amount: priceNum,
                   basis: 'stake',
                   contract_type: params?.contractType,
                   currency: 'USD',
-                  symbol: params?.symbol,
+                  underlying_symbol: params?.symbol,
                   duration: params?.duration ?? 5,
                   duration_unit: 't',
-                  ...(params?.barrier !== undefined ? { barrier: params.barrier } : {}),
+                  ...(params?.barrier !== undefined ? { barrier: String(params.barrier) } : {}),
                 },
               };
 
