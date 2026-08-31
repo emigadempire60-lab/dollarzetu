@@ -12,6 +12,7 @@ import {
   logout as coreLogout,
   getAuthInfo,
   getDerivAccounts,
+  storeDerivAccounts,
   getActiveLoginId,
   setActiveLoginId,
   setAccountType,
@@ -227,9 +228,31 @@ export function useAuth(): UseAuthReturn {
       }
 
       // Handle standard Deriv OAuth callback (token1/acct1 params)
+      // Deriv sends acct1=..., token1=..., cur1=..., acct2=..., token2=..., cur2=... etc.
+      // We parse ALL of them to build the full accounts list so both real & demo appear.
       if (token1) {
         setAuthState('authenticating');
         try {
+          // Collect all acct/token/cur groups from the URL
+          const urlForParsing = new URL(window.location.href);
+          const derivAccountsFromUrl: DerivAccount[] = [];
+          let idx = 1;
+          while (urlForParsing.searchParams.get(`token${idx}`)) {
+            const acctId = urlForParsing.searchParams.get(`acct${idx}`) ?? '';
+            const cur = urlForParsing.searchParams.get(`cur${idx}`) ?? 'USD';
+            // Deriv real accounts start with CR, demo accounts start with VRTC
+            const accountType: 'real' | 'demo' = acctId.startsWith('VR') ? 'demo' : 'real';
+            derivAccountsFromUrl.push({
+              account_id: acctId,
+              account_type: accountType,
+              currency: cur.toUpperCase(),
+              balance: '0',
+              group: '',
+              status: 'active',
+            });
+            idx++;
+          }
+
           const authInfo: AuthInfo = {
             access_token: token1,
             refresh_token: '',
@@ -238,7 +261,19 @@ export function useAuth(): UseAuthReturn {
             expires_at: Math.floor(Date.now() / 1000) + 31536000,
             scope: 'read trade admin account_manage',
           };
+
+          // If we parsed multiple accounts from URL params, seed state with them
+          // before calling completeAuth so all accounts appear immediately.
+          if (derivAccountsFromUrl.length > 1) {
+            storeDerivAccounts(derivAccountsFromUrl);
+            const firstAcct = derivAccountsFromUrl[0];
+            setActiveLoginId(firstAcct.account_id);
+            setAccountType(firstAcct.account_type);
+            setAccounts(derivAccountsFromUrl);
+          }
+
           await completeAuth(authInfo);
+
           if (typeof window !== 'undefined') {
             const cleanUrl = new URL(window.location.href);
             const params = Array.from(cleanUrl.searchParams.keys());
