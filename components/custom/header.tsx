@@ -181,6 +181,20 @@ export function Header({
                     )}
                   </button>
                 ))}
+                {accounts.every(a => a.account_type === 'demo') && (
+                  <div className="mt-1 pt-1 border-t border-border/50">
+                    <a
+                      href="https://app.deriv.com/cashier/deposit"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 w-full text-left rounded-lg px-3 py-2 text-xs text-amber-400 hover:bg-amber-500/10 transition-colors"
+                      onClick={() => setAccountSwitcherOpen(false)}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                      Deposit to activate real account
+                    </a>
+                  </div>
+                )}
               </div>
             </PopoverContent>
           </Popover>

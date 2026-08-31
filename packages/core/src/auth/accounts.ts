@@ -26,13 +26,7 @@ export async function fetchAccounts(
   }
 
   const data = await response.json();
-
-  // Debug: log the raw API response so we can see exactly what /accounts returns
-  console.log('[DollarZetu] /accounts raw response:', JSON.stringify(data, null, 2));
-
   const accounts: DerivAccount[] = data.data ?? [];
-
-  console.log('[DollarZetu] accounts count:', accounts.length, accounts.map(a => `${a.account_id}(${a.account_type})`));
 
   storeDerivAccounts(accounts);
 
