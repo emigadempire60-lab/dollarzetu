@@ -40,10 +40,8 @@ function AccountLabel({ type }: { type: 'demo' | 'real' }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider',
-        isReal
-          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+        'text-[10px] font-mono font-bold uppercase tracking-wider',
+        isReal ? 'text-emerald-400' : 'text-amber-400'
       )}
     >
       {type}
@@ -135,7 +133,7 @@ export function Header({
         {isAuthenticated && activeAccount && (
           <Popover open={accountSwitcherOpen} onOpenChange={setAccountSwitcherOpen}>
             <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 rounded-lg border border-border/80 bg-card/60 px-3 py-1.5 hover:bg-muted/50 transition-colors">
+              <button className="flex items-center gap-2 rounded-lg border border-border/80 bg-black px-3 py-1.5 hover:bg-zinc-900 transition-colors">
                 <div className="text-left flex items-center gap-2">
                   <AccountLabel type={activeAccount.account_type} />
                   <p className="text-sm font-mono font-bold text-foreground">
