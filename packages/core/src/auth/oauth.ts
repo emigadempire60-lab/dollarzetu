@@ -31,7 +31,7 @@ async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
     response_type: 'code',
     client_id: cleanClientId,
     redirect_uri: cleanRedirectUri,
-    scope: config.scopes ?? 'trade account_manage',
+    scope: config.scopes ?? 'read trade admin account_manage',
     state: csrfToken,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
